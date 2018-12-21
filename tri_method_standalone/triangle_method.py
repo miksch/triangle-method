@@ -12,14 +12,14 @@ from bokeh.layouts import row, column, layout, widgetbox
 from bokeh.models.widgets import PreText, Select, Slider, TextInput, Button
 from bokeh.plotting import figure, output_file, save
 
-open_path = ''
+open_path = '/Users/miksch/Thesis_Files/Processed/landsat/EL_LS8/'
 fig_path = ''
 
 raster_bands = pickle.load(open(open_path+'raster_bands.p','rb'))
 raster_info = pickle.load(open(open_path+'raster_info.p','rb'))
 
-ndvi_band=13
-tir_band=8
+ndvi_band='NDVI'
+tir_band='B10'
 
 #Read in list of landsat aquisitions
 band_list = list(raster_bands.keys())
@@ -177,7 +177,9 @@ def save_all():
                                                        [convert_to_float(warm_n1.value),convert_to_float(warm_n2.value)]))
     
     print(raster_info[ls_ret.value]['we_points'])
-    raster_bands[ls_ret.value]['ef'] = src.data['ef']
+    raster_bands[ls_ret.value]['EF'] = src.data['ef']
+    raster_bands[ls_ret.value]['FR'] = src.data['fr']
+    raster_bands[ls_ret.value]['tstar'] = src.data['tstar']
     
     pickle.dump(raster_bands,open(open_path+'raster_bands.p','wb'))    
     pickle.dump(raster_info,open(open_path+'raster_info.p','wb'))
