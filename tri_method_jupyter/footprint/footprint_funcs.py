@@ -52,7 +52,14 @@ def date_parse_sigv_18(doy,hr):
     
 def mask_fp_cutoff(f_array,cutoff=.9):
     '''
+    Masks all values outside of the cutoff value
     
+    Args:
+        f_array (float) : 2D numpy array of point footprint contribution values (no units)
+        cutoff (float) : Cutoff value for the cumulative sum of footprint values 
+    
+    Returns:
+        f_array (float) : 2D numpy array of footprint values, with nan == 0
     '''
     val_array = f_array.flatten()
     sort_df = pd.DataFrame({'f':val_array}).sort_values(by='f').iloc[::-1]
@@ -70,17 +77,14 @@ def find_transform(xs,ys):
     '''
     Returns the affine transform for 2d arrays xs and ys
     
-    Inputs:
-        xs :
-        ys :
+    Args:
+        xs (float) : 2D numpy array of x-coordinates
+        ys (float) : 2D numpy array of y-coordinates
         
-    Outputs:
-        aff_transform : affine.Affine object
-        
+    Returns:
+        aff_transform : affine.Affine object  
     '''
-
     
-
     shape = xs.shape
 
     #Choose points to calculate affine transform
@@ -97,23 +101,37 @@ def find_transform(xs,ys):
         
 
     
-def weight_raster(flux_raster,footprint):
+def weight_raster(x_2d, y_2d, f_2d, flux_raster):
     '''
+    Create kd tree to look up closest landsat points for each element of the footprint
+    NOTE: currently looks to closest non-nan value due to impervious masking, will need
+    to update if using more complicated RS model
+    
+    Args:
+        x_2d (float) :
+        y_2d (float) : 
+        f_2d (float) : 
+        flux_raster (float) :
+    
+    Returns:
+    
     '''
-    #Create kd tree to look up closest landsat points for each element of the footprint
-    #NOTE: currently looks to closest non-nan value due to impervious masking, will need
-    #to update if using more complicated RS model
+
+    
+    #Flatten arrays and create kd tress from x,y points
     footprint_df = pd.DataFrame({'x_foot':x_2d.ravel(),'y_foot':y_2d.ravel(),'footprint':f_2d.ravel()}).dropna().reset_index()
     points = np.column_stack([footprint_df['x_foot'].values,footprint_df['y_foot'].values])
     dist,idx = kd_tree.query(list(points))
     footprint_df['x'] = combine_xy_df.loc[idx,'x_ls'].reset_index()['x_ls']
     footprint_df['y'] = combine_xy_df.loc[idx,'y_ls'].reset_index()['y_ls']
     
+    #Calculate cumulative sum for the footprint weights
     weights = footprint_df.groupby(['x','y'],as_index=False).agg({'footprint':'sum'})
     
     test_weights = []
     test_efs = []
     
+    #Loop through weights, find closest raster points, and sum up weights for each raster point
     for p in weights.index:
         pixel_weight = weights['footprint'][p]
         x,y = weights['x'][p],weights['y'][p]
@@ -124,7 +142,8 @@ def weight_raster(flux_raster,footprint):
         
     efs = np.array(test_efs).ravel()
     weights = np.array(test_weights).ravel()
-    print(np.sum(efs*weights))
+    
+    return np.sum(efs*weights)
     
 def footprint_cdktree(raster,):
     #temp_nc = ls8.sel(time=t.strftime('%Y-%m-%d'))
