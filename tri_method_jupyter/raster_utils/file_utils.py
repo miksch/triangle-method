@@ -10,13 +10,14 @@ import datetime as dt
 def all_files(fpath):
     return [os.path.join(fpath,f) for f in os.listdir(fpath) if not f.startswith('.')]
 
-def fname_to_dt(fname,dt_str):
+def fname_to_dt(fname,dt_str,search_str,group=0):
     '''
     This function assumes that the date string is between the last underscore and the file extension
     e.g. 
     '''
-    fname_date = re.search('_(\d+).tif',fname).group(1)
-    return dt.datetime.strptime(fname_date,dt_str)
+    
+    fname_date = re.search(search_str,fname)
+    return dt.datetime.strptime(fname_date.group(group),dt_str)
 
 def band_to_var(da,band_lookup,band_name='band'):
     '''
@@ -40,15 +41,17 @@ def band_to_var(da,band_lookup,band_name='band'):
     out_dataset.attrs = temp_da.attrs
     return out_dataset
     
-def append_rasterio(files,rewrite_bands=True,band_lookup=None,dt_str='%Y%m%d',**kwargs):
+def append_rasterio(files,rewrite_bands=True,band_lookup=None,
+                    dt_str='%Y%m%d',search_str='_(\d+).tif',group=0,**kwargs):
     
     '''
     Read multiple raster files with same size, projection, and bands and concatenate into one
     xarray DataArray. Appends along 'time' coordinate.
     
     Args:
-        files (list): list of file paths for images to concatenate
-        dt_str (str): datetime strptime representation in filename
+        files (list) : list of file paths for images to concatenate
+        dt_str (str) : datetime strptime representation in filename
+        searc_str (str) : regular expression representation of the date
         **kwargs (dict): xarray.open_rasterio() arguments
     
     Returns:
@@ -67,7 +70,7 @@ def append_rasterio(files,rewrite_bands=True,band_lookup=None,dt_str='%Y%m%d',**
     for f in files:
         try:
             temp_xr = xr.open_rasterio(f,**kwargs)
-            file_date = fname_to_dt(f,dt_str)# + dt.timedelta(hours=18,minutes=7)
+            file_date = fname_to_dt(f,dt_str,search_str,group)# + dt.timedelta(hours=18,minutes=7)
             temp_xr = temp_xr.assign_coords(**{'time':file_date})
             if rewrite_bands:
                 temp_xr = band_to_var(temp_xr,band_lookup)
@@ -86,7 +89,7 @@ def append_rasterio(files,rewrite_bands=True,band_lookup=None,dt_str='%Y%m%d',**
 class band_retr(object):
     
     '''
-    Convenience lass used to get around using band as a coordinate in xarray
+    Convenience class used to get around using band as a coordinate in xarray
     
     Args:
         file (str): file path to .csv file that contains

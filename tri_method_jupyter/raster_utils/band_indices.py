@@ -3,28 +3,49 @@
 import numpy as np
 import pandas as pd
 import datetime as dt
-
+from scipy import stats
 
 #General band indicies
 
 def NDVI(nir,red):
-    return (nir-red)/(nir+red)
+    '''
+    
+    Args:
+    
+    Returns:
+    '''
+    
+    NDVI = (nir - red) / (nir + red)
+    
+    return NDVI
 
 def NDBI(swir,nir):
-    return (swir-nir)/(swir+nir)
+    '''
+    
+    Args:
+    
+    Returns:
+    '''
+    
+    NDBI = (swir-nir)/(swir+nir)
+    
+    return NDBI
 
 #BCI
 
 def tc_coeffs(platform='ls8'):
     '''
-    Return
+    Return tasseled cap coefficients [citation needed] for ls8 and ls7 platforms
     
-    possible platforms
+    Platforms:
+    'ls8' : Landsat 8
+    'ls7' : Landsat 7
     
-    Inputs 
+    Args:
+        platform (str) : String alias of satellite platform
     
-    Output
-    
+    Returns:
+        np.ndarray of tassled cap coefficients
     '''
     
     #Blue, Green, Red, NIR, SWIR1, SWIR2
@@ -58,19 +79,18 @@ def tasseled_cap(image,tc_coeffs,num_moments=3):
     '''
     
     Args:
-        param image : np.ndarray of image bands with shape (6,m,n) 
-        param tc_coeffs : Array of tasseled cap coefficients with shape (6,6,1,1)
-        param moments (int) : number of moments to calculate for the tasseled cap (default 3)
+        image (np.ndarray) : np.ndarray of image bands with shape (6,m,n) 
+        tc_coeffs (np.ndarray) : Array of tasseled cap coefficients with shape (6,6,1,1)
+        moments (int) : number of moments to calculate for the tasseled cap (default 3)
         
-    Outputs
-    ---
-    np.ndarray of tc coefficients with shape
+    Returns:
+        np.ndarray of tc coefficients with shape
     '''
     
+    #Stack images 
     image = np.repeat(image[np.newaxis,...],num_moments,axis=0)
     
     tc_coeffs = tc_coeffs[:num_moments,:,np.newaxis,np.newaxis]
-    
     
     tci = image * tc_coeffs
     
@@ -81,14 +101,76 @@ def BCI(image,tc_coeffs=tc_coeffs('ls8')):
     
     '''
     
+    #Calculate tassled caps for each band
     tcap = tasseled_cap(image,tc_coeffs,num_moments=3)
     
+    #Find maxes in the first three (HVL) bands
     HVL_maxes = np.nanmax(tcap,axis=(1,2))[:,np.newaxis,np.newaxis]
     HVL_mins = np.nanmin(tcap,axis=(1,2))[:,np.newaxis,np.newaxis]
     
-    HVL = (tcap - HVL_mins)/(HVL_maxes - HVL_mins)
+    #Normalize tassled cap values from HVL max and min
+    HVL = (tcap - HVL_mins) / (HVL_maxes - HVL_mins)
     
     return ((HVL[0,...] + HVL[2,...])/2. - HVL[1,...])/ \
            ((HVL[0,...] + HVL[2,...])/2. + HVL[1,...])   
 
+
 # Band normalization for triangle method 
+
+#Get the temperatures, warm edge line, and slope/intercept values for the warm edge 
+#Based on two points
+def warm_edge(points, num_range=None):
+    '''
+    
+    Args:
+    
+    Returns:
+    
+    ''' 
+      
+    m,b = stats.linregress(points)[0:2]    
+    #ts = np.linspace(num_range[0],num_range[1],100)
+    
+    return m, b
+
+#Calculate evaporative fraction for normalized triangle 
+#Based on slope/intercept of warm edge
+def evap_fraction(t_star, fr, m, b):
+    '''
+    
+    Args:
+    
+    Returns:
+    
+    '''
+    
+    x_vals = (fr - b) / m
+    ef_soil = 1 - t_star / x_vals
+    
+    return ef_soil * (1 - fr) + 1. * fr
+
+def t_star(tir, tmax, tmin):
+    '''
+    
+    Args:
+    
+    Returns:
+    
+    '''
+    
+    t_star = (tir - tmin) / (tmax - tmin)
+    
+    return t_star
+
+def fr(ndvi, ndvi_s, ndvi_0):
+    '''
+    
+    Args:
+    
+    Returns:
+    
+    '''
+    
+    Fr = ((ndvi - ndvi_0) / (ndvi_s - ndvi_0)) ** 2
+    
+    return Fr

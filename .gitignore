@@ -102,3 +102,10 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Other stuff (footprint)
+tri_method_jupyter/footprint/data/*
+tri_method_jupyter/footprint/output/utm_footprints/*
+tri_method_jupyter/footprint/output/custom_footprints/*
+
+tri_method_jupyter/LC08_038031_20170604_LST.LST.tif

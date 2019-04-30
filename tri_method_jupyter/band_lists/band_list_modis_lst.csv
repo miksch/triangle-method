@@ -1,0 +1,13 @@
+﻿Band,Name
+1,LST_Day_1km
+2,QC_Day
+3,Day_view_time
+4,Day_view_angle
+5,LST_Night_1km
+6,QC_Night
+7,Night_view_time
+8,Night_view_angle
+9,Emis_31
+10,Emis_32
+11,Clear_day_cov
+12,Clear_night_cov
