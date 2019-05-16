@@ -1,4 +1,4 @@
-import calc_footprint_FFP_climatology as myfootprint_s
+from . import calc_footprint_FFP_climatology as myfootprint_s
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
@@ -99,9 +99,23 @@ def find_transform(xs,ys):
 
     return aff_transform
         
-
+def footprint_ckdtree(temp_nc):
+    '''
     
-def weight_raster(x_2d, y_2d, f_2d, flux_raster):
+    
+    '''
+    #Calculate ckd tree of landsat images
+    
+    combine_xy_df = temp_nc['ef'].to_dataframe()
+    
+    combine_xy_df = combine_xy_df.dropna().reset_index().drop(columns='time').rename({'x':'x_ls','y':'y_ls'},axis=1)
+    combine_xy = np.column_stack([combine_xy_df['x_ls'].values,combine_xy_df['y_ls'].values])
+
+    kd_tree = scipy.spatial.cKDTree(list(combine_xy))
+    
+    return kd_tree, combine_xy_df
+    
+def weight_raster(x_2d, y_2d, f_2d, combine_xy_df, kd_tree):
     '''
     Create kd tree to look up closest landsat points for each element of the footprint
     NOTE: currently looks to closest non-nan value due to impervious masking, will need
@@ -145,24 +159,7 @@ def weight_raster(x_2d, y_2d, f_2d, flux_raster):
     
     return np.sum(efs*weights)
     
-def footprint_cdktree(raster,):
-    #temp_nc = ls8.sel(time=t.strftime('%Y-%m-%d'))
-    #Calculate ckd tree of landsat images
-    ls_x = temp_nc['x'].values
-    ls_y = temp_nc['y'].values
-    ls_xx,ls_yy = np.meshgrid(ls_x,ls_y)
-    ls_xflat = ls_xx.ravel()
-    ls_yflat = ls_yy.ravel()
-    dummy_mask = temp_nc['EF'].values.ravel()
 
-    combine_xy_df = pd.DataFrame({'x_ls':ls_xflat,'y_ls':ls_yflat,'ef':dummy_mask})
-    combine_xy_df = combine_xy_df.dropna().reset_index()
-
-    combine_xy = np.column_stack([combine_xy_df['x_ls'].values,combine_xy_df['y_ls'].values])
-
-    kd_tree = scipy.spatial.cKDTree(list(combine_xy))
-    
-    return kd_tree
 
 def plot_footprint():
     #Plot out footprints
